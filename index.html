@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Cliente Socket.IO</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h2>Log de Mensagens Recebidas:</h2>
+    <ul id="mensagens"></ul>
+
+    <script>
+        // Conecta no servidor Node local
+        const socket = io('http://localhost:3000');
+
+        socket.on('connect', () => {
+            document.getElementById('mensagens').innerHTML += `<li>🟢 Conectado! Meu ID: ${socket.id}</li>`;
+            
+            // Entra na sala para testes
+            socket.emit('entrar_sala', 'sala_teste');
+        });
+
+        // Ouve o evento específico que vamos disparar no Postman
+        socket.on('atualizacao_dados', (dados) => {
+            const painel = document.getElementById('mensagens');
+            painel.innerHTML += `<li>🔥 Chegou: ${JSON.stringify(dados)}</li>`;
+        });
+    </script>
+</body>
+</html>
