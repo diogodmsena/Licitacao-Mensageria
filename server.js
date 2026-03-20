@@ -1,18 +1,35 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
 
 const app = express();
+app.use(helmet()); // Proteção com cabeçalhos de segurança HTTP
 app.use(express.json()); // Permite que o servidor entenda o JSON enviado pelo Maker
-app.use(cors()); // Configuração básica de CORS
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || "*"
+})); // Configuração de CORS restrita por variável de ambiente
+
+// Rota de Health Check (Página Inicial)
+app.get('/', (req, res) => {
+    res.status(200).send(`
+        <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+                <h2 style="color: #2e7d32;">✅ Servidor de Mensageria Ativo</h2>
+                <p>O serviço Socket.IO do Pregão Eletrônico está rodando perfeitamente.</p>
+            </body>
+        </html>
+    `);
+});
 
 const server = http.createServer(app);
 
 // Inicializa o Socket.IO com configurações de resiliência
 const io = new Server(server, {
     cors: {
-        origin: "*", // Em produção, restrinja para o domínio/IP do seu Webrun
+        origin: process.env.CORS_ORIGIN || "*", // Restringe a origem baseada na variável de ambiente
         methods: ["GET", "POST"]
     },
     pingTimeout: 60000, // Tempo máximo sem resposta do cliente (reaper automático)
@@ -58,6 +75,12 @@ io.on('connection', (socket) => {
 
 // 2. Endpoint REST para o Softwell Maker disparar as mensagens
 app.post('/api/enviar-mensagem', (req, res) => {
+    // Autenticação de segurança via API Key
+    const apiKey = req.headers['x-api-key'];
+    if (process.env.API_KEY && apiKey !== process.env.API_KEY) {
+        return res.status(401).json({ erro: "Não autorizado. Chave de API inválida." });
+    }
+
     const { sala, evento, payload } = req.body;
 
     if (!evento || !payload) {
