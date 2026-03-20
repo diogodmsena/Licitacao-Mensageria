@@ -6,11 +6,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const app = express();
-app.use(helmet()); // Proteção com cabeçalhos de segurança HTTP
+// app.use(helmet()); // Desativado temporariamente para testes
 app.use(express.json()); // Permite que o servidor entenda o JSON enviado pelo Maker
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || "*"
-})); // Configuração de CORS restrita por variável de ambiente
+    origin: "*" // Liberado geral para testes
+})); // Configuração de CORS
 
 // Rota de Health Check (Página Inicial)
 app.get('/', (req, res) => {
@@ -29,7 +29,7 @@ const server = http.createServer(app);
 // Inicializa o Socket.IO com configurações de resiliência
 const io = new Server(server, {
     cors: {
-        origin: process.env.CORS_ORIGIN || "*", // Restringe a origem baseada na variável de ambiente
+        origin: "*", // Liberado geral para testes
         methods: ["GET", "POST"]
     },
     pingTimeout: 60000, // Tempo máximo sem resposta do cliente (reaper automático)
@@ -75,11 +75,11 @@ io.on('connection', (socket) => {
 
 // 2. Endpoint REST para o Softwell Maker disparar as mensagens
 app.post('/api/enviar-mensagem', (req, res) => {
-    // Autenticação de segurança via API Key
-    const apiKey = req.headers['x-api-key'];
-    if (process.env.API_KEY && apiKey !== process.env.API_KEY) {
-        return res.status(401).json({ erro: "Não autorizado. Chave de API inválida." });
-    }
+    // Autenticação de segurança via API Key (Desativado para testes)
+    // const apiKey = req.headers['x-api-key'];
+    // if (process.env.API_KEY && apiKey !== process.env.API_KEY) {
+    //     return res.status(401).json({ erro: "Não autorizado. Chave de API inválida." });
+    // }
 
     const { sala, evento, payload } = req.body;
 
