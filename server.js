@@ -4,6 +4,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
+const { AgendadorMaker } = require('./scheduler');
+
+const agendador = new AgendadorMaker();
 
 const app = express();
 // app.use(helmet()); // Desativado temporariamente para testes
@@ -98,7 +101,112 @@ app.post('/api/enviar-mensagem', (req, res) => {
     res.status(200).json({ sucesso: true, mensagem: "Despacho realizado." });
 });
 
-const PORT = process.env.PORT || 3000;
+// 3. Endpoints REST para Agendamento de Fluxos do Softwell Maker (Webhook)
+// Cria ou reagenda (UPSERT por id) um disparo programado para um fluxo do Maker
+app.post('/api/agendamentos', (req, res) => {
+    try {
+        const agendamento = agendador.agendar(req.body || {});
+        res.status(201).json({
+            sucesso: true,
+            mensagem: "Agendamento registrado com sucesso.",
+            agendamento
+        });
+    } catch (erro) {
+        res.status(400).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+// Lista todos os agendamentos (suporta filtro ?status=PENDENTE&limite=100)
+app.get('/api/agendamentos', (req, res) => {
+    try {
+        const { status, limite } = req.query;
+        const agendamentos = agendador.listar({ status, limite });
+        res.status(200).json({
+            sucesso: true,
+            total: agendamentos.length,
+            agendamentos
+        });
+    } catch (erro) {
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+// Consulta um agendamento específico pelo ID
+app.get('/api/agendamentos/:id', (req, res) => {
+    try {
+        const agendamento = agendador.buscarPorId(req.params.id);
+        if (!agendamento) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: `Agendamento '${req.params.id}' não encontrado.`
+            });
+        }
+        res.status(200).json({
+            sucesso: true,
+            agendamento
+        });
+    } catch (erro) {
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+// Atualiza ou reagenda um agendamento existente pelo ID
+app.patch('/api/agendamentos/:id', (req, res) => {
+    try {
+        const agendamento = agendador.atualizar(req.params.id, req.body || {});
+        if (!agendamento) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: `Agendamento '${req.params.id}' não encontrado.`
+            });
+        }
+        res.status(200).json({
+            sucesso: true,
+            mensagem: "Agendamento atualizado com sucesso.",
+            agendamento
+        });
+    } catch (erro) {
+        res.status(400).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+// Cancela um agendamento pelo ID
+app.delete('/api/agendamentos/:id', (req, res) => {
+    try {
+        const agendamento = agendador.cancelar(req.params.id);
+        if (!agendamento) {
+            return res.status(404).json({
+                sucesso: false,
+                erro: `Agendamento '${req.params.id}' não encontrado.`
+            });
+        }
+        res.status(200).json({
+            sucesso: true,
+            mensagem: "Agendamento cancelado com sucesso.",
+            agendamento
+        });
+    } catch (erro) {
+        res.status(500).json({
+            sucesso: false,
+            erro: erro.message
+        });
+    }
+});
+
+const PORT = process.env.PORT || 3002;
 server.listen(PORT, () => {
     console.log(`Servidor Socket.IO rodando na porta ${PORT}`);
+    agendador.iniciar();
 });

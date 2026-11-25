@@ -8,6 +8,7 @@ Este é um servidor de mensageria em tempo real baseado em **Node.js**, **Expres
 - **Gestão de Salas**: Clientes podem entrar em salas específicas (ex: um pregão específico) e o servidor gerencia a quantidade de usuários logados em cada sala (`atualizacao_qtd_usuarios`).
 - **Desconexão Resiliente**: Se um cliente fecha o navegador ou perde conexão, a sala é notificada sobre a nova contagem de usuários.
 - **API REST para Broadcast**: Um endpoint POST `/api/enviar-mensagem` que permite que sistemas externos enviem mensagens para uma sala específica ou de forma global para todos conectados.
+- **Agendador de Fluxos do Maker (Webhook Scheduler)**: Motor persistente em SQLite nativo (`node:sqlite`) para agendar disparos HTTP (POST/GET/PUT) para regras/fluxos do Softwell Maker em um dia `X` e horário `Y` específicos, com suporte a criação, reagendamento, listagem, cancelamento e retentativas automáticas.
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -52,6 +53,44 @@ Recebe uma mensagem (via requisição HTTP) e a distribui (faz *broadcast*) via 
     }
   }
   ```
+
+### `POST /api/agendamentos`
+
+Cria ou reagenda (caso seja enviado o mesmo `id`) um disparo HTTP (Webhook) para acionar um fluxo/regra do Softwell Maker em uma data e horário programados. Os agendamentos ficam persistidos localmente em `data/agendamentos.db` (SQLite nativo do Node.js).
+
+- **Corpo da Requisição (JSON):**
+  ```json
+  {
+    "id": "pregao_123_encerramento",
+    "descricao": "Encerrar fase de lances do pregão 123",
+    "data_execucao": "2026-11-15T14:30:00-03:00",
+    "url": "http://seu-servidor-maker:8080/webrun/executarRegra.rule?sys=LIC",
+    "metodo": "POST",
+    "headers": {
+      "Authorization": "Bearer token_opcional"
+    },
+    "payload": {
+      "id_pregao": 123,
+      "acao": "ENCERRAR_LANCES"
+    },
+    "max_tentativas": 3
+  }
+  ```
+  *(O campo `data_execucao` aceita tanto ISO-8601 `2026-11-15T14:30:00-03:00` quanto formato SQL `2026-11-15 14:30:00`)*
+
+### `GET /api/agendamentos`
+Lista os agendamentos registrados. Aceita filtros via Query String:
+- `?status=PENDENTE` (`PENDENTE`, `PROCESSANDO`, `CONCLUIDO`, `ERRO`, `CANCELADO`)
+- `?limite=100`
+
+### `GET /api/agendamentos/:id`
+Consulta os detalhes, histórico de tentativas e resposta HTTP de um agendamento específico.
+
+### `PATCH /api/agendamentos/:id`
+Reagenda a `data_execucao` ou atualiza `payload`/`url` de um agendamento existente e o recoloca como `PENDENTE`.
+
+### `DELETE /api/agendamentos/:id`
+Cancela um agendamento (`status = CANCELADO`), impedindo seu disparo no horário programado.
 
 ## 📡 Eventos WebSocket (Socket.IO)
 
