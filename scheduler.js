@@ -111,6 +111,11 @@ class AgendadorMaker {
             throw new Error(`Formato de 'data_execucao' inválido: '${dataInput}'. Use ISO-8601 (ex: 2026-11-15T14:30:00-03:00 ou 2026-11-15 14:30:00).`);
         }
 
+        const agora = Date.now();
+        if (timestamp <= agora) {
+            throw new Error(`A 'data_execucao' deve estar no futuro. Recebido: '${dateObj.toISOString()}', horário atual do servidor: '${new Date(agora).toISOString()}'.`);
+        }
+
         return {
             iso: dateObj.toISOString(),
             timestamp

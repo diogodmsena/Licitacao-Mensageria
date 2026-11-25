@@ -76,7 +76,7 @@ Cria ou reagenda (caso seja enviado o mesmo `id`) um disparo HTTP (Webhook) para
     "max_tentativas": 3
   }
   ```
-  *(O campo `data_execucao` aceita tanto ISO-8601 `2026-11-15T14:30:00-03:00` quanto formato SQL `2026-11-15 14:30:00`)*
+  *(O campo `data_execucao` aceita tanto ISO-8601 `2026-11-15T14:30:00-03:00` quanto formato SQL `2026-11-15 14:30:00` e deve estar obrigatoriamente no futuro)*
 
 ### `GET /api/agendamentos`
 Lista os agendamentos registrados. Aceita filtros via Query String:
